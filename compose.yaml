@@ -1,0 +1,46 @@
+# Local stack. Poller and API run from their own repos with `cargo run`, pointed at these.
+# Images are pinned; update them in a pull request.
+name: feedwatch
+
+services:
+  influxdb:
+    image: influxdb:2.9.1
+    ports: ["127.0.0.1:8086:8086"]
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: feedwatch
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD:?set INFLUX_PASSWORD in .env}
+      DOCKER_INFLUXDB_INIT_ORG: feedwatch
+      DOCKER_INFLUXDB_INIT_BUCKET: feedwatch
+      DOCKER_INFLUXDB_INIT_RETENTION: 30d
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:?set INFLUX_TOKEN in .env}
+    volumes: [influxdb-data:/var/lib/influxdb2]
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      retries: 6
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    ports: ["127.0.0.1:3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      influxdb: { condition: service_healthy }
+
+  # Added in M1 and M2, once each repo publishes an image:
+  # poller:
+  #   image: feedwatch-poller:local
+  #   env_file: ../feedwatch-poller/.env
+  # api:
+  #   image: feedwatch-api:local
+  #   env_file: ../feedwatch-api/.env
+
+volumes:
+  influxdb-data:

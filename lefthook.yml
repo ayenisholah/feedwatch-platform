@@ -1,0 +1,22 @@
+# Fast local feedback. CI is the source of truth.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: "*.{md,yml,yaml,json}"
+      run: npx --yes prettier@3 --check --ignore-unknown {staged_files}
+    - name: secrets
+      run: if command -v gitleaks >/dev/null; then gitleaks protect --staged --redact --no-banner; else echo "gitleaks not installed; CI will scan"; fi
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: npx --yes -p @commitlint/cli@21 -p @commitlint/config-conventional@21 commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: no-direct-push-to-main
+      use_stdin: true
+      run: sh scripts/block-main-push.sh
+    - name: compose
+      run: docker compose --env-file .env.example config --quiet

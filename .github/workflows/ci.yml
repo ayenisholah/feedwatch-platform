@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Commit messages
+        if: github.event_name == 'pull_request'
+        run: npx --yes -p @commitlint/cli@21 -p @commitlint/config-conventional@21 commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
+      - name: Formatting
+        run: npx --yes prettier@3 --check .
+      - name: Contract is valid JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('contracts/influx-schema.json','utf8'))"
+      - name: Compose files
+        run: |
+          docker compose --env-file .env.example config --quiet
+          AWS_REGION=eu-north-1 REGISTRY=example TAG=ci docker compose -f compose.aws.yaml config --quiet --no-interpolate
+      - name: Scan full history for committed secrets
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3 git /repo --no-banner --redact
