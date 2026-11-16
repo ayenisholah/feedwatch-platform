@@ -13,7 +13,7 @@ The hub of [Feedwatch](SPEC.md), a monitor for RedStone's on-chain push price fe
 | `feedwatch-api`                 | Rust (Axum)                        | Read API over InfluxDB                                                                                                        |
 | `feedwatch-web`                 | TypeScript (Next.js static export) | Browser client, Frox design system                                                                                            |
 
-Clone them side by side in one folder. Run `bootstrap.sh` from that folder (not from this repo) to clone any repo that's missing.
+Clone them side by side in one folder. On a new machine, clone this repo, then run `FEEDWATCH_HOME=. feedwatch-platform/scripts/bootstrap.sh` from that folder. It clones the other three and installs their git hooks.
 
 ## Local stack
 
