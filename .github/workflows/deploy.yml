@@ -1,0 +1,88 @@
+# Deploys Feedwatch to production after CI passes on main (ADR 0008, docs/DEPLOYMENT.md).
+#
+# Runs here on this repo's own merges, and is called by the Deploy workflow in feedwatch-poller,
+# feedwatch-api and feedwatch-web. It sends the SSM document `feedwatch-deploy` to the host tagged
+# project=feedwatch. The document pulls this repo and runs scripts/aws/deploy.sh under a lock, so
+# merges in different repos deploy one at a time. The IAM user behind the secrets can do nothing else.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feedwatch-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Deploy only after a successful CI run for a push to main, or when started by hand.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    environment:
+      name: production
+    env:
+      AWS_REGION: eu-north-1
+      AWS_DEFAULT_REGION: eu-north-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Deployer key present
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY aren't set in this repo. Run feedwatch-platform scripts/aws/set-deploy-secrets.sh (ADR 0008)."
+            exit 1
+          fi
+
+      - name: Run feedwatch-deploy on the host
+        run: |
+          set -euo pipefail
+          source="${GITHUB_REPOSITORY}@${SHA:0:7}"
+          cid=$(aws ssm send-command \
+            --document-name feedwatch-deploy \
+            --targets Key=tag:project,Values=feedwatch \
+            --comment "$source run $GITHUB_RUN_ID" \
+            --query Command.CommandId --output text)
+          echo "SSM command $cid for $source"
+          status=Pending
+          for _ in $(seq 1 400); do
+            sleep 10
+            status=$(aws ssm list-command-invocations --command-id "$cid" \
+              --query 'CommandInvocations[0].Status' --output text)
+            case "$status" in Pending | InProgress | Delayed | None) ;; *) break ;; esac
+          done
+          aws ssm list-command-invocations --command-id "$cid" --details \
+            --query 'CommandInvocations[0].CommandPlugins[0].Output' --output text
+          echo "Deploy finished: $status"
+          test "$status" = Success
+
+      - name: Smoke check the live site
+        run: |
+          set -euo pipefail
+          url=$(aws ssm get-parameter --name /feedwatch/site/url --query Parameter.Value --output text)
+          for _ in $(seq 1 12); do
+            if body=$(curl -fsS -m 10 "$url/api/health") && grep -q '"status":"ok"' <<<"$body"; then
+              echo "$url/api/health: $body"
+              curl -fsS -o /dev/null -m 10 "$url/" && echo "$url/: 200"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$url/api/health did not report ok within 2 minutes"
+          exit 1

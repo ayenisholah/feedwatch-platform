@@ -1,23 +1,27 @@
 # Progress (system)
 
-**Updated:** 2026-11-17
+**Updated:** 2026-11-18
 
 Read this first. It covers the whole system; each repo has its own `docs/PROGRESS.md` for detail.
 
 ## Current milestone
 
-**M0 scaffold: done.** **M1 poller: next.**
+**M0: done. M1: code done; close-out pending. M2: in progress. M4: live, with deploy on every merge.**
 
 ## Next step
 
-M1, following [the M1 plan](plans/m1-poller.md). First `chore/dependabot-triage` across the repos, then `feat/manifest` in `feedwatch-poller` (FR-FW-1). Four Ethereum feeds use `cron` schedules instead of a heartbeat; the plan covers them.
+1. **Owner:** run `scripts/aws/set-deploy-secrets.sh` once, so the four repos get the deployer key (ADR 0008). Then merge any change and watch the `Deploy` run; mark NFR-3 done.
+2. **Owner:** add the Namecheap A record `feedwatch` → `16.192.242.39`. Then set `/feedwatch/site/address` and `/feedwatch/site/url` to the domain and deploy (DEPLOYMENT, "Custom domain and HTTPS").
+3. Close M1: record the soak findings, mark FR-FW-2 to 5, FR-FW-8 and NFR-1 done, and set the roadmap.
+4. M2 in feedwatch-api: `feat/feeds-routes`, then `feat/compare`, `feat/incidents`, `feat/openapi` and `feat/limits`.
 
 ## Done
 
-| Date       | Work                                                                                                                                                                                                                                                                                                        |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-16 | M0: four repos scaffolded with docs, quality gates and CI; manifests vendored at RedStone monorepo commit `c75bac13`; live endpoint facts recorded (F-1 to F-12). Local InfluxDB and Grafana checked: the datasource connects.                                                                              |
-| 2026-11-17 | Repos published (public) under `ayenisholah`; CI green on `main` in all four. Fixes: web lockfile generated under Node 24 (web #7); Dependabot uses `docker-compose` here (#3). AWS read-only preflight through the MCP: only eu-north-1 is allowed (F-13, [deployment](DEPLOYMENT.md#account-and-region)). |
+| Date       | Work                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-18 | Outage found and fixed: from 11:56 on 2026-11-17, every poll failed (146/146) for about 11 h, because the FR-FW-9 test had left the dead URL `http://127.0.0.1:9` in the host's `.env`. The `PollCycleFailed` alarm fired as designed (FR-FW-9 done). A redeploy rewrote `.env` from SSM; polling is back at about 280 ms per cycle. The API from `feat/influx-client` (api #6) is live, with its CORS origin from `/feedwatch/site/url` (#17). The first redeploy ran the old `deploy.sh`, because bash runs the copy it opened before `git pull`; the `feedwatch-deploy` SSM document now pulls first. CD: SSM document `feedwatch-deploy`, IAM user `feedwatch-deployer` (scoped, checked with the policy simulator) and the `Deploy` workflow (ADR 0008). |
+| 2026-11-16 | M0: four repos scaffolded with docs, quality gates and CI; manifests vendored at RedStone monorepo commit `c75bac13`; live endpoint facts recorded (F-1 to F-12). Local InfluxDB and Grafana checked: the datasource connects.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-17 | Repos published (public) under `ayenisholah`; CI green on `main` in all four. Fixes: web lockfile generated under Node 24 (web #7); Dependabot uses `docker-compose` here (#3). AWS read-only preflight through the MCP: only eu-north-1 is allowed (F-13, [deployment](DEPLOYMENT.md#account-and-region)).                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## In progress
 
@@ -38,3 +42,4 @@ Nothing.
 ## Decisions log
 
 - 2026-11-16: multi-repo (ADR 0001); Rust server, TypeScript client (ADR 0002); InfluxDB only (ADR 0003); vendored manifests (ADR 0004); no Terraform, AWS through the MCP (ADR 0005); one EC2 host with S3 and CloudFront (ADR 0006).
+- 2026-11-18: every merge to `main` deploys through GitHub Actions, as a scoped IAM user, because the SCP blocks OIDC; the owner controls the organisation (ADR 0008).
