@@ -1,0 +1,32 @@
+# CodeBuild project feedwatch-build (arm64, privileged). Builds one Feedwatch repo at REF:
+# TARGET=poller|api pushes an image to ECR (tags: short SHA and latest); TARGET=web publishes the
+# static export to the site bucket. Started through the AWS MCP (docs/DEPLOYMENT.md).
+version: 0.2
+env:
+  variables:
+    TARGET: poller
+    REF: main
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+  pre_build:
+    commands:
+      - git clone --quiet --depth 1 --branch "$REF" "https://github.com/ayenisholah/feedwatch-$TARGET" src
+      - echo "Building feedwatch-$TARGET at $(git -C src rev-parse --short HEAD)"
+  build:
+    commands:
+      - |
+        set -euo pipefail
+        if [ "$TARGET" = "web" ]; then
+          cd src && npm ci --no-audit --no-fund && npm run build
+          BUCKET=$(aws ssm get-parameter --name /feedwatch/site/bucket --query Parameter.Value --output text)
+          aws s3 sync out "s3://$BUCKET" --delete --only-show-errors
+        else
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY="$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com"
+          SHA=$(git -C src rev-parse --short HEAD)
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
+          docker build -t "$REGISTRY/feedwatch-$TARGET:$SHA" -t "$REGISTRY/feedwatch-$TARGET:latest" src
+          docker push --all-tags "$REGISTRY/feedwatch-$TARGET"
+        fi
