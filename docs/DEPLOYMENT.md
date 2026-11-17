@@ -1,6 +1,6 @@
 # Deployment on AWS
 
-**Status:** being deployed (M4 brought forward on 2026-11-17 at the owner's request). **Updated:** 2026-11-17
+**Status:** live since 2026-11-17 at http://16.192.242.39 (site, `/api/health`, `/grafana/`). HTTPS waits on the domain; CloudFront waits on account verification. **Updated:** 2026-11-17
 
 Feedwatch runs on AWS in **eu-north-1**, the only Region the account's service control policy allows for regional services. Everything is created and changed through the **AWS MCP** (`aws___run_script` with boto3) and the installed `aws-*` skills, without Terraform ([ADR 0005](adr/0005-no-terraform-aws-mcp.md)). It's one EC2 host ([ADR 0006](adr/0006-single-ec2-host.md)), built by CodeBuild and served by Caddy, because GitHub OIDC and CloudFront aren't available in this account yet ([ADR 0007](adr/0007-codebuild-and-caddy.md)).
 
@@ -24,7 +24,7 @@ Priced on 2026-11-17 from the AWS Price List API (eu-north-1, on demand):
 | ECR, about 1 GB × $0.10                  | $0.10      |
 | **Priced total**                         | **$18.72** |
 
-Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. Budget `feedwatch-monthly` alerts at 80% of $25 actual and 100% forecast.
+Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. Budget `feedwatch-monthly` alerts at 80% of $25 actual and 100% forecast. It covers the whole account: a linked account can't activate cost allocation tags, and Feedwatch was the only spend when it was created.
 
 ## Resources
 
@@ -56,6 +56,13 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
   - runs `docker compose -f compose.aws.yaml pull && up -d`.
 - [`compose.aws.yaml`](../compose.aws.yaml) runs Caddy (router), the poller, the API, InfluxDB and Grafana. Each logs to its CloudWatch log group through the awslogs driver.
 - [`caddy/Caddyfile`](../caddy/Caddyfile) serves the site, `/api/*` and `/grafana*`. `SITE_ADDRESS` comes from `/feedwatch/site/address`: `:80` by default, and the domain once DNS points at the Elastic IP.
+
+## Live check (2026-11-17)
+
+- The first boot built everything on the host in about 29 minutes. The poller then checked 146 feeds per cycle in 554–640 ms, with Ethereum `USUAL` the one failing feed, as locally.
+- `/` and `/compare/` return 200, unknown paths return 404, `/api/health` returns `{"status":"ok"}`, and `/grafana/` serves the provisioned dashboard to anonymous viewers.
+- EMF metrics reached CloudWatch (fact F-18), and both alarms went `OK`.
+- Two deploy bugs were found and fixed live: the 404 status (platform#14), and a stale bind mount after replacing the site directory (platform#15).
 
 ## Deploying a change
 
