@@ -60,8 +60,10 @@ if [ "$BUILD" = "host" ]; then
   checkout feedwatch-web
   docker run --rm -v "$APP/src/feedwatch-web:/app" -w /app node:24-alpine \
     sh -c "npm ci --no-audit --no-fund --ignore-scripts >/dev/null && npx next build >/dev/null"
-  rm -rf "$APP/site.new" && cp -r "$APP/src/feedwatch-web/out" "$APP/site.new"
-  rm -rf "$APP/site" && mv "$APP/site.new" "$APP/site"
+  # Replace the contents, not the directory: the router bind-mounts $APP/site, and a renamed
+  # directory would leave it serving the deleted one.
+  find "$APP/site" -mindepth 1 -delete
+  cp -a "$APP/src/feedwatch-web/out/." "$APP/site/"
   docker compose -f compose.aws.yaml pull --quiet router influxdb grafana
 else
   aws s3 sync "s3://$(param /feedwatch/site/bucket)" "$APP/site" --delete --only-show-errors
