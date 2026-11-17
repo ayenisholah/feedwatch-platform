@@ -27,5 +27,16 @@ jobs:
         run: |
           docker compose --env-file .env.example config --quiet
           AWS_REGION=eu-north-1 REGISTRY=example TAG=ci docker compose -f compose.aws.yaml config --quiet --no-interpolate
+      - name: Dashboard JSON matches its generator
+        run: python3 grafana/build-dashboard.py && git diff --exit-code grafana/dashboards
+      - name: Grafana loads the datasource and dashboard (FR-FW-8)
+        run: |
+          cp .env.example .env
+          docker compose up -d influxdb grafana
+          until curl -sf 127.0.0.1:3001/api/health >/dev/null; do sleep 2; done
+          P=$(grep GRAFANA_ADMIN_PASSWORD .env | cut -d= -f2)
+          curl -sf -u "admin:$P" 127.0.0.1:3001/api/datasources/uid/feedwatch-influx/health | grep -q '"status":"OK"'
+          curl -sf -u "admin:$P" 127.0.0.1:3001/api/dashboards/uid/feedwatch-feeds | grep -q '"uid":"feedwatch-feeds"'
+          docker compose down -v
       - name: Scan full history for committed secrets
         run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3 git /repo --no-banner --redact
