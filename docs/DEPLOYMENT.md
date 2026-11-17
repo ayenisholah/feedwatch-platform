@@ -59,6 +59,8 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
 
 ## Deploying a change
 
+`/feedwatch/build/mode` selects how the host gets its artefacts. `host` (the default until the CodeBuild quota increase is granted, ADR 0007) builds them on the host from `main`; `ecr` uses what CodeBuild published. In `host` mode, skip step 1.
+
 Through the AWS MCP:
 
 1. `codebuild:StartBuild` on project `feedwatch-build` with `TARGET` = `poller`, `api` or `web` (and `REF`, default `main`). Wait for `SUCCEEDED`.
