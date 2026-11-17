@@ -4,13 +4,13 @@
 
 Each step is one branch and one pull request in the named repo. [Progress](PROGRESS.md) shows where things stand.
 
-| Milestone | Outcome                                                                | Status                                                                           |
-| --------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| M0        | Scaffold: four repos, docs, quality gates, CI                          | Done                                                                             |
-| M1        | Poller writes real feed data and checks to InfluxDB; Grafana dashboard | Next                                                                             |
-| M2        | Rust API serves feeds, compare and incidents                           | Planned                                                                          |
-| M3        | Web client in Frox                                                     | Planned                                                                          |
-| M4        | Deployed on AWS through the AWS MCP                                    | Live (poller, Grafana, placeholder web); HTTPS, CloudFront and CodeBuild pending |
+| Milestone | Outcome                                                                | Status                                                                                  |
+| --------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| M0        | Scaffold: four repos, docs, quality gates, CI                          | Done                                                                                    |
+| M1        | Poller writes real feed data and checks to InfluxDB; Grafana dashboard | Next                                                                                    |
+| M2        | Rust API serves feeds, compare and incidents                           | Planned                                                                                 |
+| M3        | Web client in Frox                                                     | Planned                                                                                 |
+| M4        | Deployed on AWS through the AWS MCP                                    | Live; every merge to `main` deploys (ADR 0008); HTTPS, CloudFront and CodeBuild pending |
 
 ## M1: poller (`feedwatch-poller`)
 

@@ -1,6 +1,6 @@
 # 0007: CodeBuild for builds, Caddy on the host until CloudFront is available
 
-**Status:** Accepted, 2026-11-17. Amends [0006](0006-single-ec2-host.md).
+**Status:** Accepted, 2026-11-17. Amends [0006](0006-single-ec2-host.md). Deploys through GitHub Actions superseded by [0008](0008-github-actions-deploy.md) on 2026-11-18.
 
 ## Context
 

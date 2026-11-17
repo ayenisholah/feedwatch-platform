@@ -1,6 +1,6 @@
 # Deployment on AWS
 
-**Status:** live since 2026-11-17 at http://16.192.242.39 (site, `/api/health`, `/grafana/`). HTTPS waits on the domain; CloudFront waits on account verification. **Updated:** 2026-11-17
+**Status:** live since 2026-11-17 at http://16.192.242.39 (site, `/api/health`, `/grafana/`). Every merge to `main` deploys through GitHub Actions (ADR 0008). HTTPS waits on the domain; CloudFront waits on account verification. **Updated:** 2026-11-18
 
 Feedwatch runs on AWS in **eu-north-1**, the only Region the account's service control policy allows for regional services. Everything is created and changed through the **AWS MCP** (`aws___run_script` with boto3) and the installed `aws-*` skills, without Terraform ([ADR 0005](adr/0005-no-terraform-aws-mcp.md)). It's one EC2 host ([ADR 0006](adr/0006-single-ec2-host.md)), built by CodeBuild and served by Caddy, because GitHub OIDC and CloudFront aren't available in this account yet ([ADR 0007](adr/0007-codebuild-and-caddy.md)).
 
@@ -28,22 +28,24 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
 
 ## Resources
 
-| #   | Resource                                                           | Detail                                                                                                                                                                             |
-| --- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Budget `feedwatch-monthly`                                         | $25/month; filtered on the `project=feedwatch` cost allocation tag, which must be activated in Billing; emails the owner                                                           |
-| 2   | SNS topic `feedwatch-alerts`                                       | Email subscription to the owner, who must click the confirmation link                                                                                                              |
-| 3   | ECR `feedwatch-poller`, `feedwatch-api`                            | Scan on push, keep the last 10 images                                                                                                                                              |
-| 4   | S3 site bucket                                                     | Private, versioned, public access blocked. Name in `/feedwatch/site/bucket`                                                                                                        |
-| 5   | IAM role `feedwatch-host` and instance profile                     | SSM core, ECR read, read `/feedwatch/*` parameters and the site bucket, write `/feedwatch/*` logs                                                                                  |
-| 6   | IAM role `feedwatch-build`                                         | CodeBuild: push to the two ECR repos, write the site bucket, write `/feedwatch/build` logs                                                                                         |
-| 7   | Security group `feedwatch-host`                                    | 80 and 443 in from anywhere (Caddy); no SSH                                                                                                                                        |
-| 8   | Elastic IP                                                         | The host's stable address                                                                                                                                                          |
-| 9   | Log groups `/feedwatch/{poller,api,influxdb,grafana,router,build}` | 14-day retention                                                                                                                                                                   |
-| 10  | SSM parameters                                                     | `/feedwatch/rpc/{ethereum,arbitrum,base}`, `/feedwatch/influx/{token,password}` and `/feedwatch/grafana/admin-password` (SecureString), and `/feedwatch/site/{bucket,url,address}` |
-| 11  | CodeBuild project `feedwatch-build`                                | arm64, privileged, buildspec [`scripts/aws/buildspec.yml`](../scripts/aws/buildspec.yml)                                                                                           |
-| 12  | EC2 `feedwatch-host`                                               | t4g.small, Amazon Linux 2023 arm64, 20 GB gp3 encrypted, IMDSv2 required, user data [`scripts/aws/host-bootstrap.sh`](../scripts/aws/host-bootstrap.sh)                            |
-| 13  | CloudWatch alarms                                                  | `feedwatch-poll-cycle-failed` (EMF metric `Feedwatch/PollCycleFailed`, at least 3 in 5 minutes, or missing data) and `feedwatch-host-status` (EC2 status checks), both to SNS      |
-| —   | CloudFront OAC `feedwatch-web`, function `feedwatch-index`         | Created; the distribution waits on account verification (ADR 0007)                                                                                                                 |
+| #   | Resource                                                           | Detail                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Budget `feedwatch-monthly`                                         | $25/month; filtered on the `project=feedwatch` cost allocation tag, which must be activated in Billing; emails the owner                                                                                   |
+| 2   | SNS topic `feedwatch-alerts`                                       | Email subscription to the owner, who must click the confirmation link                                                                                                                                      |
+| 3   | ECR `feedwatch-poller`, `feedwatch-api`                            | Scan on push, keep the last 10 images                                                                                                                                                                      |
+| 4   | S3 site bucket                                                     | Private, versioned, public access blocked. Name in `/feedwatch/site/bucket`                                                                                                                                |
+| 5   | IAM role `feedwatch-host` and instance profile                     | SSM core, ECR read, read `/feedwatch/*` parameters and the site bucket, write `/feedwatch/*` logs                                                                                                          |
+| 6   | IAM role `feedwatch-build`                                         | CodeBuild: push to the two ECR repos, write the site bucket, write `/feedwatch/build` logs                                                                                                                 |
+| 7   | Security group `feedwatch-host`                                    | 80 and 443 in from anywhere (Caddy); no SSH                                                                                                                                                                |
+| 8   | Elastic IP                                                         | The host's stable address                                                                                                                                                                                  |
+| 9   | Log groups `/feedwatch/{poller,api,influxdb,grafana,router,build}` | 14-day retention                                                                                                                                                                                           |
+| 10  | SSM parameters                                                     | `/feedwatch/rpc/{ethereum,arbitrum,base}`, `/feedwatch/influx/{token,password}` and `/feedwatch/grafana/admin-password` (SecureString), and `/feedwatch/site/{bucket,url,address}`                         |
+| 11  | CodeBuild project `feedwatch-build`                                | arm64, privileged, buildspec [`scripts/aws/buildspec.yml`](../scripts/aws/buildspec.yml)                                                                                                                   |
+| 12  | EC2 `feedwatch-host`                                               | t4g.small, Amazon Linux 2023 arm64, 20 GB gp3 encrypted, IMDSv2 required, user data [`scripts/aws/host-bootstrap.sh`](../scripts/aws/host-bootstrap.sh)                                                    |
+| 13  | CloudWatch alarms                                                  | `feedwatch-poll-cycle-failed` (EMF metric `Feedwatch/PollCycleFailed`, at least 3 in 5 minutes, or missing data) and `feedwatch-host-status` (EC2 status checks), both to SNS                              |
+| 14  | SSM document `feedwatch-deploy`                                    | No parameters: `git pull` in `/opt/feedwatch/platform`, then `deploy.sh` under a lock. The only thing GitHub Actions can run                                                                               |
+| 15  | IAM user `feedwatch-deployer`                                      | Path `/feedwatch/`; inline policy `feedwatch-deploy-only` (send `feedwatch-deploy` to `project=feedwatch` instances, read results and `/feedwatch/site/url`). Key in the repos' Actions secrets (ADR 0008) |
+| —   | CloudFront OAC `feedwatch-web`, function `feedwatch-index`         | Created; the distribution waits on account verification (ADR 0007)                                                                                                                                         |
 
 ## The host
 
@@ -66,13 +68,18 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
 
 ## Deploying a change
 
-`/feedwatch/build/mode` selects how the host gets its artefacts. `host` (the default until the CodeBuild quota increase is granted, ADR 0007) builds them on the host from `main`; `ecr` uses what CodeBuild published. In `host` mode, skip step 1.
+Every merge to `main` deploys itself ([ADR 0008](adr/0008-github-actions-deploy.md)). When `CI` passes for a push to `main` in any of the four repos, the `Deploy` workflow:
 
-Through the AWS MCP:
+1. sends the SSM document `feedwatch-deploy` to the instance tagged `project=feedwatch`. The document pulls this repo, then runs `scripts/aws/deploy.sh` under `flock /opt/feedwatch/deploy.lock`, so deploys queue rather than overlap;
+2. waits for the result and prints the host's output, failing on anything but `Success`;
+3. checks `/api/health` and `/` on `/feedwatch/site/url`.
 
-1. `codebuild:StartBuild` on project `feedwatch-build` with `TARGET` = `poller`, `api` or `web` (and `REF`, default `main`). Wait for `SUCCEEDED`.
-2. `ssm:SendCommand` with `AWS-RunShellScript` on the instance tagged `project=feedwatch`: `bash /opt/feedwatch/platform/scripts/aws/deploy.sh`.
-3. Check: `GET /api/health` and Grafana `/grafana/api/health` on the site, `/health` on the poller through SSM (`curl localhost` inside the poller network), and the `feedwatch-poll-cycle-failed` alarm state.
+The workflow is `.github/workflows/deploy.yml` in this repo; the other repos call it. It authenticates as the IAM user `feedwatch-deployer`, which may only send that document to that instance and read its results and the site URL. Its key lives in each repo's `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets, set by `scripts/aws/set-deploy-secrets.sh` (`ROTATE=1` for the yearly rotation).
+
+- **Redeploy by hand:** `gh workflow run Deploy --repo ayenisholah/feedwatch-platform`, or, through the AWS MCP, `ssm:SendCommand` with document `feedwatch-deploy`.
+- **Build mode:** `/feedwatch/build/mode` selects how the host gets its artefacts. `host` (the default until the CodeBuild quota increase is granted, ADR 0007) builds everything on the host from `main`, in about 4 to 5 minutes. `ecr` uses what CodeBuild published, started with `codebuild:StartBuild` on `feedwatch-build`.
+- **Never edit `/opt/feedwatch/.env` by hand:** every deploy rewrites it from SSM. On 2026-11-17 a hand edit for the FR-FW-9 test left every RPC URL dead for about 11 hours. Change the SSM parameter, then deploy.
+- **Extra checks:** Grafana `/grafana/api/health`, the poller's `/health` through SSM, and the `feedwatch-poll-cycle-failed` alarm state.
 
 ## Custom domain and HTTPS (owner)
 
