@@ -1,0 +1,508 @@
+{
+  "uid": "feedwatch-feeds",
+  "title": "Feedwatch: RedStone push feeds",
+  "description": "Freshness, missed updates and RPC health for RedStone push feeds on Ethereum, Arbitrum and Base.",
+  "tags": [
+    "feedwatch",
+    "redstone"
+  ],
+  "timezone": "utc",
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "chain",
+        "label": "Chain",
+        "type": "custom",
+        "multi": true,
+        "includeAll": false,
+        "query": "ethereum,arbitrum,base",
+        "current": {
+          "text": [
+            "ethereum",
+            "arbitrum",
+            "base"
+          ],
+          "value": [
+            "ethereum",
+            "arbitrum",
+            "base"
+          ]
+        },
+        "options": [
+          {
+            "text": "ethereum",
+            "value": "ethereum",
+            "selected": true
+          },
+          {
+            "text": "arbitrum",
+            "value": "arbitrum",
+            "selected": true
+          },
+          {
+            "text": "base",
+            "value": "base",
+            "selected": true
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Feeds checked",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"poll_cycle\" and r._field == \"feeds\")\n  |> last()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Feeds not ok",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"poll_cycle\" and r._field == \"failed_feeds\")\n  |> last()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Open incidents",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"incident\" and r._field == \"incident_id\")\n  |> group(columns: [\"_value\"]) |> sort(columns: [\"_time\"]) |> last()\n  |> group() |> filter(fn: (r) => r.event == \"open\") |> count()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Last cycle",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"poll_cycle\" and r._field == \"duration_ms\")\n  |> last()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Closest to their heartbeat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 14,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "age = from(bucket: \"feedwatch\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"feed_round\" and r._field == \"age_s\" and contains(value: r.chain, set: ${chain:json}))\n  |> last() |> keep(columns: [\"chain\", \"feed_id\", \"_value\"]) |> rename(columns: {_value: \"age\"})\nhb = from(bucket: \"feedwatch\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"feed_check\" and r._field == \"heartbeat_s\" and contains(value: r.chain, set: ${chain:json}))\n  |> last() |> keep(columns: [\"chain\", \"feed_id\", \"_value\"]) |> rename(columns: {_value: \"heartbeat\"})\njoin(tables: {a: age, h: hb}, on: [\"chain\", \"feed_id\"])\n  |> map(fn: (r) => ({chain: r.chain, feed: r.feed_id, \"age (h)\": float(v: r.age) / 3600.0,\n                      \"heartbeat (h)\": float(v: r.heartbeat) / 3600.0,\n                      \"% of heartbeat\": float(v: r.age) / float(v: r.heartbeat) * 100.0}))\n  |> group() |> sort(columns: [\"% of heartbeat\"], desc: true) |> limit(n: 25)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 110
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% of heartbeat"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Feeds not ok now",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 4,
+        "w": 10,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"feed_check\" and r._field == \"heartbeat_s\" and contains(value: r.chain, set: ${chain:json}))\n  |> group(columns: [\"chain\", \"feed_id\"]) |> last()\n  |> group() |> filter(fn: (r) => r.status != \"ok\")\n  |> keep(columns: [\"_time\", \"chain\", \"feed_id\", \"status\"])"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Distance from reference price (ETH, BTC, USDC)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"feed_check\" and r._field == \"reference_deviation_pct\" and contains(value: r.chain, set: ${chain:json}))\n  |> group(columns: [\"chain\", \"feed_id\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({r with _field: r.feed_id + \" on \" + r.chain}))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "RPC latency by provider",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"rpc_call\" and r._field == \"latency_ms\" and contains(value: r.chain, set: ${chain:json}))\n  |> group(columns: [\"provider\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "RPC failed requests by provider",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"rpc_call\" and r._field == \"ok\" and contains(value: r.chain, set: ${chain:json}))\n  |> map(fn: (r) => ({r with _value: if r._value then 0.0 else 100.0}))\n  |> group(columns: [\"provider\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Poll cycle duration",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"poll_cycle\" and r._field == \"duration_ms\")"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Incidents (30 days)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "feedwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "feedwatch-influx"
+          },
+          "query": "from(bucket: \"feedwatch\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"incident\" and contains(value: r.chain, set: ${chain:json}))\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group() |> sort(columns: [\"_time\"], desc: true)\n  |> keep(columns: [\"_time\", \"chain\", \"feed_id\", \"kind\", \"event\", \"detail\", \"incident_id\"])"
+        }
+      ]
+    }
+  ]
+}
