@@ -3,6 +3,7 @@
 # static export to the site bucket. Started through the AWS MCP (docs/DEPLOYMENT.md).
 version: 0.2
 env:
+  shell: bash
   variables:
     TARGET: poller
     REF: main
