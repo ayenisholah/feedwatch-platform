@@ -14,7 +14,14 @@
 
 	handle {
 		root * /srv/site
-		try_files {path} {path}/index.html /404.html
+		try_files {path} {path}/index.html
+		file_server
+	}
+
+	# Unknown paths get the static export's 404 page with a real 404 status.
+	handle_errors 404 {
+		root * /srv/site
+		rewrite * /404.html
 		file_server
 	}
 

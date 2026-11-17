@@ -70,5 +70,7 @@ else
 fi
 
 docker compose -f compose.aws.yaml up -d --remove-orphans
+# The Caddyfile is a bind mount, so apply any change to it without restarting the router.
+docker compose -f compose.aws.yaml exec -T router caddy reload --config /etc/caddy/Caddyfile >/dev/null
 docker image prune -f >/dev/null
 docker compose -f compose.aws.yaml ps --format '{{.Service}} {{.State}}'
