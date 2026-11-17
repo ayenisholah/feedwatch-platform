@@ -50,7 +50,7 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
 - `host-bootstrap.sh` installs Docker and Compose, adds 2 GB of swap, clones this repo to `/opt/feedwatch/platform` and runs `deploy.sh`.
 - `deploy.sh`:
   - pulls this repo;
-  - writes `/opt/feedwatch/.env` from SSM;
+  - writes `/opt/feedwatch/.env` from SSM, including the API's CORS origin `FEEDWATCH_ALLOWED_ORIGIN`, taken from `/feedwatch/site/url`;
   - syncs the site bucket to `/opt/feedwatch/site`;
   - logs in to ECR;
   - runs `docker compose -f compose.aws.yaml pull && up -d`.

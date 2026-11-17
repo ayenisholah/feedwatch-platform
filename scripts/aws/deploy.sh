@@ -13,6 +13,9 @@ git pull --ff-only --quiet
 
 param() { aws ssm get-parameter --name "$1" ${2:+--with-decryption} --query Parameter.Value --output text; }
 
+SITE_URL=$(param /feedwatch/site/url)
+export SITE_URL
+
 # Runtime configuration, from SSM Parameter Store. Secrets stay on the host, mode 600.
 umask 077
 INFLUX_TOKEN=$(param /feedwatch/influx/token secure)
@@ -26,6 +29,8 @@ INFLUX_URL=http://influxdb:8086
 INFLUX_ORG=feedwatch
 INFLUX_BUCKET=feedwatch
 INFLUX_TOKEN=$INFLUX_TOKEN
+# The API allows CORS only from the site itself (GR-2).
+FEEDWATCH_ALLOWED_ORIGIN=$SITE_URL
 DOCKER_INFLUXDB_INIT_MODE=setup
 DOCKER_INFLUXDB_INIT_USERNAME=feedwatch
 DOCKER_INFLUXDB_INIT_PASSWORD=$(param /feedwatch/influx/password secure)
@@ -42,7 +47,6 @@ ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 export REGISTRY="$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com"
 export TAG="${TAG:-latest}"
 export SITE_ADDRESS="$(param /feedwatch/site/address 2>/dev/null || echo :80)"
-export SITE_URL="$(param /feedwatch/site/url)"
 
 BUILD="${BUILD:-$(param /feedwatch/build/mode 2>/dev/null || echo host)}"
 mkdir -p "$APP/site" "$APP/src"
