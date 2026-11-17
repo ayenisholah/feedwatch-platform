@@ -14,6 +14,8 @@ Each step is one branch and one pull request in the named repo. [Progress](PROGR
 
 ## M1: poller (`feedwatch-poller`)
 
+The detailed plan, with the order, tests and verification for each branch, is in [plans/m1-poller.md](plans/m1-poller.md). Start with `chore/dependabot-triage`.
+
 | Branch                            | Delivers         | Notes                                                                                                                               |
 | --------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `feat/manifest`                   | FR-FW-1          | Merge per-feed overrides into the defaults; normalise feed IDs; keep chain ID and adapter address                                   |
