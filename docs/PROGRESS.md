@@ -10,7 +10,7 @@ Read this first. It covers the whole system; each repo has its own `docs/PROGRES
 
 ## Next step
 
-In `feedwatch-poller`, branch `feat/manifest` (FR-FW-1): merge each feed's `updateTriggersOverrides` into its manifest's defaults, and return `Vec<Feed>` with the chain, feed ID, address, heartbeat and deviation threshold. Start from the existing test `fr_fw_1_manifests_parse` in `src/manifest.rs`.
+M1, following [the M1 plan](plans/m1-poller.md). First `chore/dependabot-triage` across the repos, then `feat/manifest` in `feedwatch-poller` (FR-FW-1). Four Ethereum feeds use `cron` schedules instead of a heartbeat; the plan covers them.
 
 ## Done
 
