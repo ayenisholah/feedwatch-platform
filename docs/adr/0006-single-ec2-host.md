@@ -1,6 +1,6 @@
 # 0006: One EC2 host, with the client on S3 and CloudFront
 
-**Status:** Accepted, 2026-11-16.
+**Status:** Accepted, 2026-11-16. Amended by [0007](0007-codebuild-and-caddy.md): CloudFront is pending account verification, so Caddy on the host serves everything for now.
 
 ## Context
 

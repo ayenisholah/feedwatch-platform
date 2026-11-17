@@ -1,0 +1,26 @@
+# Feedwatch on the EC2 host (docs/DEPLOYMENT.md). SITE_ADDRESS is ":80" until a domain points at the
+# Elastic IP; set it to the domain (for example feedwatch.sholaayeni.xyz) and Caddy obtains a
+# Let's Encrypt certificate and redirects HTTP to HTTPS on its own.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
+	handle {
+		root * /srv/site
+		try_files {path} {path}/index.html /404.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
