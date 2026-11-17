@@ -19,7 +19,7 @@ Clone them side by side in one folder. On a new machine, clone this repo, then r
 
 ```sh
 cp .env.example .env      # then set real values
-docker compose up -d      # InfluxDB on 127.0.0.1:8086, Grafana on 127.0.0.1:3001
+docker compose up -d --build   # InfluxDB :8086, Grafana :3001, poller /health :8081 (all on 127.0.0.1)
 ```
 
 ## Docs

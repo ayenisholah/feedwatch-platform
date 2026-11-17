@@ -1,4 +1,4 @@
-# Local stack. Poller and API run from their own repos with `cargo run`, pointed at these.
+# Local stack. The poller builds from the sibling repo (../feedwatch-poller); the API joins in M2.
 # Images are pinned; update them in a pull request.
 name: feedwatch
 
@@ -34,13 +34,26 @@ services:
     depends_on:
       influxdb: { condition: service_healthy }
 
-  # Added in M1 and M2, once each repo publishes an image:
-  # poller:
-  #   image: feedwatch-poller:local
-  #   env_file: ../feedwatch-poller/.env
+  poller:
+    build: ../feedwatch-poller
+    image: feedwatch-poller:local
+    ports: ["127.0.0.1:8081:8081"]
+    environment:
+      RUST_LOG: info
+      FEEDWATCH_RPC_ETHEREUM: ${FEEDWATCH_RPC_ETHEREUM:-https://ethereum-rpc.publicnode.com}
+      FEEDWATCH_RPC_ARBITRUM: ${FEEDWATCH_RPC_ARBITRUM:-https://arbitrum-one-rpc.publicnode.com}
+      FEEDWATCH_RPC_BASE: ${FEEDWATCH_RPC_BASE:-https://base-rpc.publicnode.com}
+      FEEDWATCH_POLL_INTERVAL_SECS: ${FEEDWATCH_POLL_INTERVAL_SECS:-60}
+      FEEDWATCH_HEALTH_ADDR: 0.0.0.0:8081
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+    depends_on:
+      influxdb: { condition: service_healthy }
+    restart: unless-stopped
+
+  # Added in M2, once feedwatch-api serves data:
   # api:
-  #   image: feedwatch-api:local
-  #   env_file: ../feedwatch-api/.env
+  #   build: ../feedwatch-api
 
 volumes:
   influxdb-data:
