@@ -56,7 +56,8 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
   - starts InfluxDB first, and makes sure two bucket-scoped tokens exist: one that reads the `feedwatch` bucket (API and Grafana) and one that reads and writes it (the poller, which also reloads open incidents). They're created once through the InfluxDB CLI, kept in `/opt/feedwatch/influx-tokens.env` (mode 600), and recreated if InfluxDB no longer has them. They never leave the host;
   - syncs the site bucket to `/opt/feedwatch/site`;
   - logs in to ECR;
-  - runs `docker compose -f compose.aws.yaml pull && up -d`.
+  - runs `docker compose -f compose.aws.yaml pull && up -d`;
+  - prunes Docker build cache down to 3 GB, and fails if the disk is over 85% full, so a filling disk shows up as a failed `Deploy` run.
 - [`compose.aws.yaml`](../compose.aws.yaml) runs Caddy (router), the poller, the API, InfluxDB and Grafana. Each logs to its CloudWatch log group through the awslogs driver.
 - [`caddy/Caddyfile`](../caddy/Caddyfile) serves the site, `/api/*` and `/grafana*`. `SITE_ADDRESS` comes from `/feedwatch/site/address`: `:80` by default, and the domain once DNS points at the Elastic IP.
 
