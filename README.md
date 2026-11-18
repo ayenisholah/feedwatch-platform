@@ -4,9 +4,9 @@
 
 The hub of [Feedwatch](SPEC.md), a monitor for RedStone's on-chain push price feeds. This repo holds the system docs, the data contract shared by the other repos, the local Compose stack, Grafana provisioning and the AWS deployment notes.
 
-> **Live:** http://16.192.242.39 (web client placeholder), [`/grafana/`](http://16.192.242.39/grafana/d/feedwatch-feeds) (dashboard, read-only), [`/api/health`](http://16.192.242.39/api/health). Running on one AWS t4g.small in eu-north-1 ([deployment](docs/DEPLOYMENT.md)).
+> **Live:** https://feedwatch.sholaayeni.xyz (web client placeholder), [`/grafana/`](https://feedwatch.sholaayeni.xyz/grafana/d/feedwatch-feeds) (dashboard, read-only), [`/api/feeds`](https://feedwatch.sholaayeni.xyz/api/feeds), [`/api/compare`](https://feedwatch.sholaayeni.xyz/api/compare), [`/api/openapi.json`](https://feedwatch.sholaayeni.xyz/api/openapi.json). One AWS t4g.small in eu-north-1; every merge to `main` deploys ([deployment](docs/DEPLOYMENT.md)).
 >
-> **Status: M1 (poller) nearly done.** The poller checks all 146 RedStone push feeds on Ethereum, Arbitrum and Base every minute, writes to InfluxDB, and the Grafana dashboard is provisioned. The API (M2), web client (M3) and AWS deployment (M4) are next. See [progress](docs/PROGRESS.md) and the [roadmap](docs/ROADMAP.md).
+> **Status: M1 (poller) and M2 (API) done; M3 (web client) next.** The poller checks all 146 RedStone push feeds on Ethereum, Arbitrum and Base every minute. The API serves feeds, cross-chain compare and incidents, with its contract released as [`openapi.json` v0.1.0](https://github.com/ayenisholah/feedwatch-api/releases/tag/v0.1.0). See [progress](docs/PROGRESS.md) and the [roadmap](docs/ROADMAP.md).
 
 ## Repos
 
