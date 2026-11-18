@@ -79,7 +79,12 @@ jobs:
           for _ in $(seq 1 12); do
             if body=$(curl -fsS -m 10 "$url/api/health") && grep -q '"status":"ok"' <<<"$body"; then
               echo "$url/api/health: $body"
-              curl -fsS -o /dev/null -m 10 "$url/" && echo "$url/: 200"
+              # Every page of the web client (FR-FW-7).
+              for page in / /compare/ /incidents/ "/feed/?chain=ethereum&id=ETH"; do
+                # On its own line: under set -e a failure left of && wouldn't stop the step.
+                curl -fsS -o /dev/null -m 10 "$url$page"
+                echo "$url$page: 200"
+              done
               exit 0
             fi
             sleep 10

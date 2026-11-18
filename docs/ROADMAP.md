@@ -9,7 +9,7 @@ Each step is one branch and one pull request in the named repo. [Progress](PROGR
 | M0        | Scaffold: four repos, docs, quality gates, CI                          | Done                                                                                                                 |
 | M1        | Poller writes real feed data and checks to InfluxDB; Grafana dashboard | Done                                                                                                                 |
 | M2        | Rust API serves feeds, compare and incidents                           | Done                                                                                                                 |
-| M3        | Web client in Frox                                                     | Next                                                                                                                 |
+| M3        | Web client in Frox                                                     | Done                                                                                                                 |
 | M4        | Deployed on AWS through the AWS MCP                                    | Live at https://feedwatch.sholaayeni.xyz; every merge to `main` deploys (ADR 0008); CloudFront and CodeBuild pending |
 
 ## M1: poller (`feedwatch-poller`)
