@@ -51,9 +51,22 @@ services:
       influxdb: { condition: service_healthy }
     restart: unless-stopped
 
-  # Added in M2, once feedwatch-api serves data:
-  # api:
-  #   build: ../feedwatch-api
+  api:
+    build: ../feedwatch-api
+    image: feedwatch-api:local
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      RUST_LOG: info
+      FEEDWATCH_API_ADDR: 0.0.0.0:8080
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_ORG: feedwatch
+      INFLUX_BUCKET: feedwatch
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      # The web client's dev server (GR-2).
+      FEEDWATCH_ALLOWED_ORIGIN: ${FEEDWATCH_ALLOWED_ORIGIN:-http://localhost:3000}
+    depends_on:
+      influxdb: { condition: service_healthy }
+    restart: unless-stopped
 
 volumes:
   influxdb-data:
