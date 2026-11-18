@@ -145,4 +145,15 @@ docker compose -f compose.aws.yaml up -d --remove-orphans
 # The Caddyfile is a bind mount, so apply any change to it without restarting the router.
 docker compose -f compose.aws.yaml exec -T router caddy reload --config /etc/caddy/Caddyfile >/dev/null
 docker image prune -f >/dev/null
+# Host builds leave Docker build cache behind; unpruned it filled the 20 GB disk to 99% by
+# 2026-11-18. Keep 3 GB, enough for fast incremental builds.
+docker builder prune -f --keep-storage 3gb >/dev/null
 docker compose -f compose.aws.yaml ps --format '{{.Service}} {{.State}}'
+
+# Fail the deploy, so the Actions run shows it, while there's still room to act.
+used=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+echo "disk ${used}% used"
+if [ "$used" -gt 85 ]; then
+  echo "disk is ${used}% full (over 85%): free space on the host" >&2
+  exit 1
+fi
