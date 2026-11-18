@@ -8,7 +8,7 @@ Feedwatch runs on AWS in **eu-north-1**, the only Region the account's service c
 
 - Check prices first, with the `aws-billing-and-cost-management` skill and the Price List API, and get the owner's OK before creating billable resources. The owner approved this deployment on 2026-11-17.
 - Tag every resource `project=feedwatch`. Each step looks its resource up by name or tag first, so it can safely run again.
-- Keep the account ID and secrets out of this repo. Secrets are generated inside the AWS MCP sandbox and stored as SSM SecureString. They're written only to `/opt/feedwatch/.env` (mode 600) on the host.
+- Keep the account ID and secrets out of this repo. Secrets are generated inside the AWS MCP sandbox and stored as SSM SecureString. On the host they're written only to per-service env files, `/opt/feedwatch/.env.<service>` (mode 600), each holding just that service's settings.
 
 ## Cost
 
@@ -52,7 +52,8 @@ Not priced: custom metrics (3), CodeBuild minutes per deploy, and S3 requests. B
 - `host-bootstrap.sh` installs Docker and Compose, adds 2 GB of swap, clones this repo to `/opt/feedwatch/platform` and runs `deploy.sh`.
 - `deploy.sh`:
   - pulls this repo;
-  - writes `/opt/feedwatch/.env` from SSM, including the API's CORS origin `FEEDWATCH_ALLOWED_ORIGIN`, taken from `/feedwatch/site/url`;
+  - writes one env file per service from SSM (`/opt/feedwatch/.env.{influxdb,poller,api,grafana}`, mode 600). Only InfluxDB gets the admin token and its password; Grafana gets its admin password. The API's CORS origin `FEEDWATCH_ALLOWED_ORIGIN` comes from `/feedwatch/site/url`;
+  - starts InfluxDB first, and makes sure two bucket-scoped tokens exist: one that reads the `feedwatch` bucket (API and Grafana) and one that reads and writes it (the poller, which also reloads open incidents). They're created once through the InfluxDB CLI, kept in `/opt/feedwatch/influx-tokens.env` (mode 600), and recreated if InfluxDB no longer has them. They never leave the host;
   - syncs the site bucket to `/opt/feedwatch/site`;
   - logs in to ECR;
   - runs `docker compose -f compose.aws.yaml pull && up -d`.
@@ -78,7 +79,7 @@ The workflow is `.github/workflows/deploy.yml` in this repo; the other repos cal
 
 - **Redeploy by hand:** `gh workflow run Deploy --repo ayenisholah/feedwatch-platform`, or, through the AWS MCP, `ssm:SendCommand` with document `feedwatch-deploy`.
 - **Build mode:** `/feedwatch/build/mode` selects how the host gets its artefacts. `host` (the default until the CodeBuild quota increase is granted, ADR 0007) builds everything on the host from `main`, in about 4 to 5 minutes. `ecr` uses what CodeBuild published, started with `codebuild:StartBuild` on `feedwatch-build`.
-- **Never edit `/opt/feedwatch/.env` by hand:** every deploy rewrites it from SSM. On 2026-11-17 a hand edit for the FR-FW-9 test left every RPC URL dead for about 11 hours. Change the SSM parameter, then deploy.
+- **Never edit the host's env files (`/opt/feedwatch/.env.*`) by hand:** every deploy rewrites it from SSM. On 2026-11-17 a hand edit for the FR-FW-9 test left every RPC URL dead for about 11 hours. Change the SSM parameter, then deploy.
 - **Extra checks:** Grafana `/grafana/api/health`, the poller's `/health` through SSM, and the `feedwatch-poll-cycle-failed` alarm state.
 
 ## Custom domain and HTTPS

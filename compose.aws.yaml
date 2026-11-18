@@ -1,6 +1,7 @@
 # Production stack on the EC2 host (docs/DEPLOYMENT.md). Not used locally.
 # scripts/aws/deploy.sh exports REGISTRY (ECR host), TAG, AWS_REGION, SITE_ADDRESS and SITE_URL, and
-# writes /opt/feedwatch/.env (mode 600) from SSM Parameter Store. Logs go to CloudWatch Logs.
+# writes one env file per service (/opt/feedwatch/.env.<service>, mode 600) with only that service's
+# settings and secrets. Logs go to CloudWatch Logs.
 name: feedwatch
 
 services:
@@ -23,7 +24,7 @@ services:
 
   poller:
     image: ${REGISTRY}/feedwatch-poller:${TAG:-latest}
-    env_file: /opt/feedwatch/.env
+    env_file: /opt/feedwatch/.env.poller
     depends_on:
       influxdb: { condition: service_healthy }
     logging:
@@ -35,7 +36,7 @@ services:
 
   api:
     image: ${REGISTRY}/feedwatch-api:${TAG:-latest}
-    env_file: /opt/feedwatch/.env
+    env_file: /opt/feedwatch/.env.api
     environment:
       FEEDWATCH_API_ADDR: 0.0.0.0:8080
     logging:
@@ -47,7 +48,7 @@ services:
 
   influxdb:
     image: influxdb:2.9.1
-    env_file: /opt/feedwatch/.env
+    env_file: /opt/feedwatch/.env.influxdb
     volumes: [influxdb-data:/var/lib/influxdb2]
     healthcheck:
       test: ["CMD", "influx", "ping"]
@@ -62,7 +63,7 @@ services:
 
   grafana:
     image: grafana/grafana-oss:13.0.2
-    env_file: /opt/feedwatch/.env
+    env_file: /opt/feedwatch/.env.grafana
     environment:
       GF_SERVER_ROOT_URL: ${SITE_URL}/grafana/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
