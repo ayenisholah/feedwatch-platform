@@ -1,6 +1,6 @@
 # Deployment on AWS
 
-**Status:** live since 2026-11-17 at http://16.192.242.39 (site, `/api/health`, `/grafana/`). Every merge to `main` deploys through GitHub Actions (ADR 0008). HTTPS waits on the domain; CloudFront waits on account verification. **Updated:** 2026-11-18
+**Status:** live at https://feedwatch.sholaayeni.xyz since 2026-11-18 (on the IP since 2026-11-17). Every merge to `main` deploys through GitHub Actions (ADR 0008). CloudFront waits on account verification. **Updated:** 2026-11-18
 
 Feedwatch runs on AWS in **eu-north-1**, the only Region the account's service control policy allows for regional services. Everything is created and changed through the **AWS MCP** (`aws___run_script` with boto3) and the installed `aws-*` skills, without Terraform ([ADR 0005](adr/0005-no-terraform-aws-mcp.md)). It's one EC2 host ([ADR 0006](adr/0006-single-ec2-host.md)), built by CodeBuild and served by Caddy, because GitHub OIDC and CloudFront aren't available in this account yet ([ADR 0007](adr/0007-codebuild-and-caddy.md)).
 
@@ -81,7 +81,9 @@ The workflow is `.github/workflows/deploy.yml` in this repo; the other repos cal
 - **Never edit `/opt/feedwatch/.env` by hand:** every deploy rewrites it from SSM. On 2026-11-17 a hand edit for the FR-FW-9 test left every RPC URL dead for about 11 hours. Change the SSM parameter, then deploy.
 - **Extra checks:** Grafana `/grafana/api/health`, the poller's `/health` through SSM, and the `feedwatch-poll-cycle-failed` alarm state.
 
-## Custom domain and HTTPS (owner)
+## Custom domain and HTTPS
+
+Done on 2026-11-18: `feedwatch.sholaayeni.xyz` has an A record to the Elastic IP, and Caddy holds a Let's Encrypt certificate it renews itself (F-20). HTTP, including the bare IP, redirects to HTTPS. The steps, for a new domain:
 
 1. In Namecheap, add an A record `feedwatch` pointing to the Elastic IP (look it up in the EC2 console or the `/feedwatch/site/url` parameter).
 2. Set `/feedwatch/site/address` to `feedwatch.sholaayeni.xyz` and `/feedwatch/site/url` to `https://feedwatch.sholaayeni.xyz`, then redeploy (step 2 above). Caddy obtains the certificate on its own.
