@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   influxdb:
-    image: influxdb:2.9.1
+    image: influxdb:2.10.1
     env_file: /opt/feedwatch/.env.influxdb
     volumes: [influxdb-data:/var/lib/influxdb2]
     healthcheck:
